@@ -354,7 +354,8 @@
                     <input type="password" id="apiKeyInput" placeholder="Enter your OpenAI API key">
                     <button id="saveApiKey">Save Key</button>
                 </div>
-                <p class="api-key-info">Your API key is stored only in your browser and is never sent to our servers. GPT-4 Vision provides more accurate text extraction with contextual understanding.</p>
+                <p class="api-key-info">Your API key is stored only in your browser and is never sent to our servers. OpenAI o3 provides more accurate text extraction with contextual understanding.</p>
+                <p class="api-key-info"><strong>Note:</strong> If you don't have OpenAI credits, you can use the free Tesseract OCR option which works well for printed text.</p>
                 <p class="api-key-info"><strong>For handwriting:</strong> GPT-4 Vision can read cursive writing, messy handwriting, and understand context much better than traditional OCR.</p>
             </div>
 
@@ -654,7 +655,18 @@
                 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.error?.message || 'Failed to extract text');
+                    let errorMessage = errorData.error?.message || 'Failed to extract text';
+                    
+                    // Handle specific error types
+                    if (errorMessage.includes('quota') || errorMessage.includes('billing')) {
+                        errorMessage = 'OpenAI API quota exceeded. Please check your billing at https://platform.openai.com/account/billing or try Tesseract OCR instead.';
+                    } else if (errorMessage.includes('invalid_api_key')) {
+                        errorMessage = 'Invalid API key. Please check your OpenAI API key.';
+                    } else if (errorMessage.includes('model')) {
+                        errorMessage = 'Model not available. Please check if you have access to the o3 model or try a different model.';
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
                 
                 const data = await response.json();
@@ -680,7 +692,11 @@
             } catch (error) {
                 progressContainer.style.display = 'none';
                 extractBtn.disabled = false;
-                showStatus('Error with OpenAI API: ' + error.message, 'error');
+                let statusMessage = 'Error with OpenAI API: ' + error.message;
+                if (error.message.includes('quota')) {
+                    statusMessage += ' <br><br><strong>Suggestion:</strong> Try using Tesseract OCR (free) by clicking the "Tesseract OCR" button above.';
+                }
+                showStatus(statusMessage, 'error');
                 console.error('OpenAI Error:', error);
             }
         }
@@ -735,7 +751,16 @@
                 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.error?.message || 'Failed to enhance text');
+                    let errorMessage = errorData.error?.message || 'Failed to enhance text';
+                    
+                    // Handle specific error types
+                    if (errorMessage.includes('quota') || errorMessage.includes('billing')) {
+                        errorMessage = 'OpenAI API quota exceeded. Please check your billing at https://platform.openai.com/account/billing';
+                    } else if (errorMessage.includes('invalid_api_key')) {
+                        errorMessage = 'Invalid API key. Please check your OpenAI API key.';
+                    }
+                    
+                    throw new Error(errorMessage);
                 }
                 
                 const data = await response.json();
