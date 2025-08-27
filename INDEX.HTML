@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Image Text Extractor - OCR to PDF</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            text-align: center;
+            padding: 30px 20px; 
+            
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .api-key-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .api-key-input {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .api-key-input input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .api-key-input button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .api-key-input button:hover {
+            background: #218838;
+        }
+
+        .api-key-info {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section.drag-over {
+            border-color: #4facfe;
+            background: #e7f3ff;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .upload-text {
+            color: #6c757d;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        .supported-formats {
+            font-size: 0.9rem;
+            color: #adb5bd;
+        }
+
+        .preview-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .preview-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .image-preview, .result-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 300px;
+        }
+
+        .preview-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        #previewImage {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+
+        .no-image {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #adb5bd;
+            font-style: italic;
+        }
+
+        #extractedText {
+            width: 100%;
+            min-height: 200px;
+            max-height: 400px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            resize: vertical;
+            white-space: pre-wrap;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #fd7e14 0%, #feb240 100%);
+            color: white;
+        }
+
+        .btn-secondary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-tertiary {
+            background: linear-gradient(135deg, #9C27B0 0%, #E91E63 100%);
+            color: white;
+        }
+
+        .btn-tertiary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .progress-container {
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 0.9rem;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .method-selector {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .method-btn {
+            padding: 10px 20px;
+            border: 2px solid #4facfe;
+            border-radius: 8px;
+            background: white;
+            color: #4facfe;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .method-btn.active {
+            background: #4facfe;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="/Fazaia-School-College-Air-Force-School-logo--removebg-preview.png" alt="">
+            <h1> Handwriting to pdf converter</h1>
+            <p>Upload an image, extract text using OCR or OpenAI GPT-4 Vision, and download as PDF</p>
+        </div>
+
+        <div class="main-content">
+            <div class="api-key-section">
+                <h3 class="preview-title">OpenAI API Key</h3>
+                <div class="api-key-input">
+                    <input type="password" id="apiKeyInput" placeholder="Enter your OpenAI API key">
+                    <button id="saveApiKey">Save Key</button>
+                </div>
+                <p class="api-key-info">Your API key is stored only in your browser and is never sent to our servers. GPT-4 Vision provides more accurate text extraction with contextual understanding.</p>
+            </div>
+
+            <div class="method-selector">
+                <button class="method-btn active" id="tesseractBtn">Tesseract OCR</button>
+                <button class="method-btn" id="openaiBtn">OpenAI GPT-4 Vision</button>
+            </div>
+
+            <div class="upload-section" id="uploadSection">
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    📁 Upload Image
+                </button>
+                <input type="file" id="fileInput" class="file-input" accept=".jpg,.jpeg,.png" onchange="handleFileSelect(event)">
+                <p class="upload-text">or drag and drop your image here</p>
+                <p class="supported-formats">Supported formats: JPG, PNG</p>
+            </div>
+
+            <div class="preview-section">
+                <div class="image-preview">
+                    <h3 class="preview-title">Image Preview</h3>
+                    <div id="previewContainer" class="no-image">
+                        <p>No image selected</p>
+                    </div>
+                </div>
+
+                <div class="result-section">
+                    <h3 class="preview-title">Extracted Text</h3>
+                    <textarea id="extractedText" placeholder="Extracted text will appear here..." readonly></textarea>
+                </div>
+            </div>
+
+            <div class="progress-container" id="progressContainer" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress" id="progressBar"></div>
+                </div>
+                <p class="progress-text" id="progressText">Processing...</p>
+            </div>
+
+            <div id="statusMessage"></div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="extractBtn" onclick="extractText()" disabled>
+                    🪄 Extract Text
+                </button>
+                <button class="btn btn-secondary" id="downloadBtn" onclick="downloadPDF()" disabled>
+                    📄 Download PDF
+                </button>
+                <button class="btn btn-tertiary" id="enhanceBtn" onclick="enhanceWithGPT()" disabled>
+                    🧠 Enhance with AI
+                </button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Powered by Tesseract.js & OpenAI GPT-4 Vision • Built with JavaScript</p>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentImage = null;
+        let extractedText = '';
+        let openAiApiKey = '';
+        let useOpenAI = false;
+
+        // DOM elements
+        const uploadSection = document.getElementById('uploadSection');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const extractBtn = document.getElementById('extractBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const enhanceBtn = document.getElementById('enhanceBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const statusMessage = document.getElementById('statusMessage');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const saveApiKeyBtn = document.getElementById('saveApiKey');
+        const tesseractBtn = document.getElementById('tesseractBtn');
+        const openaiBtn = document.getElementById('openaiBtn');
+
+        // Initialize from localStorage
+        document.addEventListener('DOMContentLoaded', function() {
+            hideStatus();
+            const savedApiKey = localStorage.getItem('openaiApiKey');
+            if (savedApiKey) {
+                apiKeyInput.value = savedApiKey;
+                openAiApiKey = savedApiKey;
+            }
+        });
+
+        // Save API key
+        saveApiKeyBtn.addEventListener('click', function() {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                openAiApiKey = key;
+                localStorage.setItem('openaiApiKey', key);
+                showStatus('API key saved successfully!', 'success');
+            } else {
+                showStatus('Please enter a valid API key', 'error');
+            }
+        });
+
+        // Method selection
+        tesseractBtn.addEventListener('click', function() {
+            useOpenAI = false;
+            tesseractBtn.classList.add('active');
+            openaiBtn.classList.remove('active');
+            showStatus('Using Tesseract OCR for text extraction', 'info');
+        });
+
+        openaiBtn.addEventListener('click', function() {
+            if (!openAiApiKey) {
+                showStatus('Please enter your OpenAI API key first', 'error');
+                return;
+            }
+            useOpenAI = true;
+            openaiBtn.classList.add('active');
+            tesseractBtn.classList.remove('active');
+            showStatus('Using OpenAI GPT-4 Vision for text extraction', 'info');
+        });
+
+        // Drag and drop functionality
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('drag-over');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('drag-over');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && isValidFile(files[0])) {
+                handleFile(files[0]);
+            }
+        });
+
+        // File input change handler
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file && isValidFile(file)) {
+                handleFile(file);
+            }
+        }
+
+        // Validate file type
+        function isValidFile(file) {
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+            if (!validTypes.includes(file.type)) {
+                showStatus('Please select a valid JPG or PNG image file.', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        // Handle selected file
+        function handleFile(file) {
+            currentImage = file;
+            
+            // Create preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewContainer.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.id = 'previewImage';
+                img.alt = 'Uploaded image preview';
+                previewContainer.appendChild(img);
+                
+                // Enable extract button
+                extractBtn.disabled = false;
+                downloadBtn.disabled = true;
+                enhanceBtn.disabled = true;
+                
+                // Clear previous results
+                document.getElementById('extractedText').value = '';
+                hideStatus();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Extract text using selected method
+        function extractText() {
+            if (!currentImage) {
+                showStatus('Please upload an image first.', 'error');
+                return;
+            }
+
+            if (useOpenAI) {
+                if (!openAiApiKey) {
+                    showStatus('Please enter your OpenAI API key first.', 'error');
+                    return;
+                }
+                extractWithOpenAI();
+            } else {
+                extractWithTesseract();
+            }
+        }
+
+        // Extract text using Tesseract.js
+        function extractWithTesseract() {
+            // Show progress
+            progressContainer.style.display = 'block';
+            extractBtn.disabled = true;
+            hideStatus();
+
+            Tesseract.recognize(
+                currentImage,
+                'eng', // English language
+                {
+                    logger: progress => {
+                        if (progress.status === 'recognizing text') {
+                            const progressPercent = Math.round(progress.progress * 100);
+                            progressBar.style.width = progressPercent + '%';
+                            progressText.textContent = `Processing: ${progressPercent}%`;
+                        }
+                    }
+                }
+            ).then(result => {
+                extractedText = result.data.text;
+                document.getElementById('extractedText').value = extractedText;
+                
+                // Hide progress and enable buttons
+                progressContainer.style.display = 'none';
+                downloadBtn.disabled = false;
+                enhanceBtn.disabled = false;
+                
+                if (extractedText.trim() === '') {
+                    showStatus('No text was detected in the image.', 'info');
+                } else {
+                    showStatus('Text extraction completed successfully!', 'success');
+                }
+            }).catch(error => {
+                progressContainer.style.display = 'none';
+                extractBtn.disabled = false;
+                showStatus('Error during text extraction: ' + error.message, 'error');
+                console.error('OCR Error:', error);
+            });
+        }
+
+        // Extract text using OpenAI GPT-4 Vision
+        async function extractWithOpenAI() {
+            if (!currentImage || !openAiApiKey) return;
+            
+            // Show progress
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '10%';
+            progressText.textContent = 'Preparing image...';
+            extractBtn.disabled = true;
+            hideStatus();
+            
+            try {
+                // Convert image to base64
+                const base64Image = await getBase64(currentImage);
+                
+                progressBar.style.width = '30%';
+                progressText.textContent = 'Sending to OpenAI...';
+                
+                // Call OpenAI API
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${openAiApiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-4-vision-preview",
+                        messages: [
+                            {
+                                role: "user",
+                                content: [
+                                    {
+                                        type: "text",
+                                        text: "Extract all text from this image accurately. Return only the extracted text without any additional commentary or formatting."
+                                    },
+                                    {
+                                        type: "image_url",
+                                        image_url: {
+                                            url: base64Image
+                                        }
+                                    }
+                                ]
+                            }
+                        ],
+                        max_tokens: 1000
+                    })
+                });
+                
+                progressBar.style.width = '70%';
+                progressText.textContent = 'Processing response...';
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || 'Failed to extract text');
+                }
+                
+                const data = await response.json();
+                extractedText = data.choices[0].message.content;
+                
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Complete!';
+                
+                document.getElementById('extractedText').value = extractedText;
+                
+                // Enable download button
+                downloadBtn.disabled = false;
+                enhanceBtn.disabled = false;
+                
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 1000);
+                
+                showStatus('Text extraction with GPT-4 Vision completed successfully!', 'success');
+                
+            } catch (error) {
+                progressContainer.style.display = 'none';
+                extractBtn.disabled = false;
+                showStatus('Error with OpenAI API: ' + error.message, 'error');
+                console.error('OpenAI Error:', error);
+            }
+        }
+
+        // Convert file to base64
+        function getBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // Enhance extracted text with GPT
+        async function enhanceWithGPT() {
+            if (!extractedText || !openAiApiKey) {
+                showStatus('No text to enhance or missing API key', 'error');
+                return;
+            }
+            
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '10%';
+            progressText.textContent = 'Sending to OpenAI...';
+            enhanceBtn.disabled = true;
+            
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${openAiApiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: "gpt-3.5-turbo",
+                        messages: [
+                            {
+                                role: "system",
+                                content: "You are a helpful assistant that improves and corrects text extracted from images. Fix any errors, improve formatting, and make the text more readable while preserving the original content accurately."
+                            },
+                            {
+                                role: "user",
+                                content: `Please improve and correct the following text extracted from an image:\n\n${extractedText}`
+                            }
+                        ],
+                        max_tokens: 2000
+                    })
+                });
+                
+                progressBar.style.width = '70%';
+                progressText.textContent = 'Processing enhancement...';
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || 'Failed to enhance text');
+                }
+                
+                const data = await response.json();
+                const enhancedText = data.choices[0].message.content;
+                extractedText = enhancedText;
+                
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Complete!';
+                
+                document.getElementById('extractedText').value = enhancedText;
+                
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 1000);
+                
+                showStatus('Text enhancement completed successfully!', 'success');
+                
+            } catch (error) {
+                progressContainer.style.display = 'none';
+                enhanceBtn.disabled = false;
+                showStatus('Error enhancing text: ' + error.message, 'error');
+                console.error('Enhancement Error:', error);
+            }
+        }
+
+        // Download extracted text as PDF
+        function downloadPDF() {
+            if (!extractedText.trim()) {
+                showStatus('No text available to download.', 'error');
+                return;
+            }
+
+            try {
+                // Create PDF using jsPDF
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Set document properties
+                doc.setProperties({
+                    title: 'Extracted Text from Image',
+                    subject: 'OCR Text Extraction',
+                    author: 'AI Text Extractor'
+                });
+
+                // Add content to PDF
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const margin = 20;
+                
+                // Add header
+                doc.setFontSize(18);
+                doc.setTextColor(40, 40, 40);
+                doc.text('Extracted Text from Image', pageWidth / 2, margin, { align: 'center' });
+                
+                // Add date
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth - margin, margin + 10, { align: 'right' });
+                
+                // Add separator line
+                doc.setDrawColor(200, 200, 200);
+                doc.line(margin, margin + 15, pageWidth - margin, margin + 15);
+                
+                // Add extracted text
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                doc.setFont('courier');
+                
+                const textLines = doc.splitTextToSize(extractedText, pageWidth - 2 * margin);
+                let yPosition = margin + 25;
+                
+                textLines.forEach(line => {
+                    if (yPosition > pageHeight - margin) {
+                        doc.addPage();
+                        yPosition = margin;
+                    }
+                    doc.text(line, margin, yPosition);
+                    yPosition += 7;
+                });
+                
+                // Add footer
+                doc.setFontSize(8);
+                doc.setTextColor(150, 150, 150);
+                doc.text('Generated by AI Text Extractor • Powered by Tesseract.js & OpenAI', pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+                // Save PDF
+                doc.save('extracted-text.pdf');
+                showStatus('PDF downloaded successfully!', 'success');
+                
+            } catch (error) {
+                showStatus('Error creating PDF: ' + error.message, 'error');
+                console.error('PDF Error:', error);
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            statusMessage.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        // Hide status message
+        function hideStatus() {
+            statusMessage.innerHTML = '';
+        }
+    </script>
+</body>
+</html>
