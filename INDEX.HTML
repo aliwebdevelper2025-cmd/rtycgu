@@ -355,11 +355,12 @@
                     <button id="saveApiKey">Save Key</button>
                 </div>
                 <p class="api-key-info">Your API key is stored only in your browser and is never sent to our servers. GPT-4 Vision provides more accurate text extraction with contextual understanding.</p>
+                <p class="api-key-info"><strong>For handwriting:</strong> GPT-4 Vision can read cursive writing, messy handwriting, and understand context much better than traditional OCR.</p>
             </div>
 
             <div class="method-selector">
                 <button class="method-btn active" id="tesseractBtn">Tesseract OCR</button>
-                <button class="method-btn" id="openaiBtn">OpenAI GPT-4 Vision</button>
+                <button class="method-btn" id="openaiBtn">GPT-4 Vision (Best for Handwriting)</button>
             </div>
 
             <div class="upload-section" id="uploadSection">
@@ -462,7 +463,7 @@
             useOpenAI = false;
             tesseractBtn.classList.add('active');
             openaiBtn.classList.remove('active');
-            showStatus('Using Tesseract OCR for text extraction', 'info');
+            showStatus('Using Tesseract OCR - Good for printed text', 'info');
         });
 
         openaiBtn.addEventListener('click', function() {
@@ -473,7 +474,7 @@
             useOpenAI = true;
             openaiBtn.classList.add('active');
             tesseractBtn.classList.remove('active');
-            showStatus('Using OpenAI GPT-4 Vision for text extraction', 'info');
+            showStatus('Using GPT-4 Vision - Optimized for handwriting recognition', 'info');
         });
 
         // Drag and drop functionality
@@ -587,9 +588,9 @@
                 enhanceBtn.disabled = false;
                 
                 if (extractedText.trim() === '') {
-                    showStatus('No text was detected in the image.', 'info');
+                    showStatus('No text was detected. Try using GPT-4 Vision for handwriting.', 'info');
                 } else {
-                    showStatus('Text extraction completed successfully!', 'success');
+                    showStatus('Text extraction completed! Use "Enhance with AI" to improve accuracy.', 'success');
                 }
             }).catch(error => {
                 progressContainer.style.display = 'none';
@@ -632,7 +633,7 @@
                                 content: [
                                     {
                                         type: "text",
-                                        text: "Extract all text from this image accurately. Return only the extracted text without any additional commentary or formatting."
+                                        text: "You are an expert at reading handwriting and extracting text from images. Please carefully analyze this image and extract ALL text, including:\n\n- Handwritten text (cursive, print, or mixed)\n- Any printed text\n- Text at any angle or orientation\n- Faded, light, or hard-to-read text\n- Numbers, dates, and special characters\n- Text in margins or annotations\n\nPay special attention to:\n- Letter formations that might be unclear\n- Connecting letters in cursive writing\n- Context clues to determine unclear words\n- Maintaining original line breaks and paragraph structure\n\nReturn ONLY the extracted text exactly as written, preserving the original formatting and structure. Do not add any commentary, explanations, or formatting markers."
                                     },
                                     {
                                         type: "image_url",
@@ -643,7 +644,8 @@
                                 ]
                             }
                         ],
-                        max_tokens: 1000
+                        max_tokens: 2000,
+                        temperature: 0.1
                     })
                 });
                 
@@ -672,6 +674,7 @@
                 }, 1000);
                 
                 showStatus('Text extraction with GPT-4 Vision completed successfully!', 'success');
+                extractBtn.disabled = false; // Allow re-extraction for better results
                 
             } catch (error) {
                 progressContainer.style.display = 'none';
@@ -715,11 +718,11 @@
                         messages: [
                             {
                                 role: "system",
-                                content: "You are a helpful assistant that improves and corrects text extracted from images. Fix any errors, improve formatting, and make the text more readable while preserving the original content accurately."
+                                content: "You are a helpful assistant that improves and corrects text extracted from handwritten documents and images. Your task is to:\n\n1. Fix spelling errors and typos\n2. Correct grammar while preserving the original voice\n3. Improve punctuation and capitalization\n4. Maintain the original structure and meaning\n5. Keep the authentic tone of handwritten content\n6. Preserve any intentional informal language or personal style\n\nDo not change the fundamental content or add information that wasn't in the original text."
                             },
                             {
                                 role: "user",
-                                content: `Please improve and correct the following text extracted from an image:\n\n${extractedText}`
+                                content: `Please improve and correct the following text that was extracted from a handwritten document. Fix any OCR errors while preserving the original meaning and style:\n\n${extractedText}`
                             }
                         ],
                         max_tokens: 2000
@@ -745,9 +748,10 @@
                 
                 setTimeout(() => {
                     progressContainer.style.display = 'none';
+                    enhanceBtn.disabled = false; // Re-enable for multiple enhancements
                 }, 1000);
                 
-                showStatus('Text enhancement completed successfully!', 'success');
+                showStatus('Handwriting enhancement completed! You can enhance again if needed.', 'success');
                 
             } catch (error) {
                 progressContainer.style.display = 'none';
